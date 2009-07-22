@@ -137,7 +137,7 @@ riseConfig.debug.antennas = False
 # from ./modules/phy/OFDMAPhy--unstable--0.3/PyConfig/ofdmaphy/OFDMAPhy.py
 ofdmaPhyConfig = WNS.modules.ofdmaPhy
 ofdmaPhySystem = ofdmaphy.OFDMAPhy.OFDMASystem('ofdma')
-ofdmaPhySystem.Scenario = rise.Scenario.Scenario(Config.scenarioXSize, Config.scenarioYSize)
+ofdmaPhySystem.Scenario = rise.Scenario.Scenario()
 ofdmaPhyConfig.systems.append(ofdmaPhySystem)
 
 ####################################################
