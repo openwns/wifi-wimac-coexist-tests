@@ -24,8 +24,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
+from wrowser.simdb.SimConfig import params
+
 import os
 import sys
+
+# DO NOT forget to copy commonConfig, Layer2.py, Station.py, Node.py, 
+# configWiFi.py and configWiMAC.py  when creating a campaign
+
+sys.path.append(os.path.join('.','commonConfig'))
+sys.path.append(os.path.join('..','commonConfig'))
 
 import rise
 import openwns
@@ -66,27 +74,44 @@ class Config(object):
         distance_BS_SS = 50.0
         
         # Even if False we transmit one packet to establish flow
-        trafficULenabled = True     
-        trafficDLenabled = False
-        trafficUL = 3E6
-        trafficDL = 3E6
-        packetSize = 3000.0
+        if params.WiMAXDirection == 'UL' or params.WiMAXDirection == 'Both':
+            trafficULenabled = True     
+        else:    
+            trafficULenabled = False     
+        
+        if params.WiMAXDirection == 'DL' or params.WiMAXDirection == 'Both':
+            trafficDLenabled = True
+        else:            
+            trafficDLenabled = False
+            
+        trafficUL = params.WiMAXULTraffic
+        trafficDL = params.WiMAXDLTraffic
+        packetSize = params.WiMAXPacketSize
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
-        adaptiveMCS = False
+        adaptiveMCS = params.WiMAXAMC
     
     class ConfigWiFi(object):
         distance_AP_STA = 50.0                
-        trafficULenabled = True
-        trafficDLenabled = False
-        trafficUL = 5E6
-        trafficDL = 5E6
-        packetSize = 12000.0
+        
+        if (params.WiFiDirection == "UL") or (params.WiFiDirection == "Both"):
+            trafficULenabled = True     
+        else:    
+            trafficULenabled = False     
+        
+        if (params.WiFiDirection == "DL") or (params.WiFiDirection == "Both"):
+            trafficDLenabled = True
+        else:            
+            trafficDLenabled = False
+
+        trafficUL = params.WiFiULTraffic
+        trafficDL = params.WiFiDLTraffic
+        packetSize = params.WiFiPacketSize
         
         # If False only 5Mbps is used no mather what channel estimation decides
-        adaptiveMCS = False          
+        adaptiveMCS = params.WiFiAMC          
     
-    distanceAP_BS = 1.0
+    distanceAP_BS = params.Distance
     frequency = 5470.0 #GHz
     
     simTime = 10.0
