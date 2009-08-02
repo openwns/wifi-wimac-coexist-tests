@@ -400,3 +400,5 @@ class MySTAConfig(wifimac.support.Transceiver.Station):
 ###########################################
 # Scenario setup etc. is in configCommon.py
 execfile('configCommon.py')
+print accessPoints[0].dll.upperConvergenceName
+print userTerminals[0].dll.upperConvergenceName

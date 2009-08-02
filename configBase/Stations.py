@@ -1,8 +1,8 @@
 from Layer2 import *
-import dll.UpperConvergence
-import dll.CompoundSwitch
+import wimac.CompoundSwitch
 import wimac.Scheduler
 import wimac.FUReseter
+import wimac.FUs
 import openwns.Tools
 import math
 from wimac.FrameBuilder import ActivationAction, OperationMode
@@ -26,17 +26,17 @@ class BaseStation(Layer2):
         self.qosCategory = 'NoQoS'
 
         # BaseStation specific components
-        self.upperconvergence = dll.UpperConvergence.AP()
+        self.upperconvergence = wimac.FUs.UpperConvergence()
         self.stationType = "AP"
 
         # control plane
-        self.rngCompoundSwitch = dll.CompoundSwitch.CompoundSwitch()
+        self.rngCompoundSwitch = wimac.CompoundSwitch.CompoundSwitch()
         self.rngCompoundSwitch.onDataFilters.append(
-            dll.CompoundSwitch.FilterAll('All') )
+            wimac.CompoundSwitch.FilterAll('All') )
         self.rngCompoundSwitch.sendDataFilters.append(
-            dll.CompoundSwitch.FilterNone('None') )
+            wimac.CompoundSwitch.FilterNone('None') )
         self.rngCompoundSwitch.sendDataFilters.append(
-            dll.CompoundSwitch.FilterAll('All') )
+            wimac.CompoundSwitch.FilterAll('All') )
 
         # frame elements
         self.framehead = wimac.FrameBuilder.FrameHeadCollector('frameBuilder')
@@ -110,8 +110,8 @@ class BaseStation(Layer2):
         self.frameBuilder.connect(self.phyUser)
 
     def setupCompoundSwitch(self):
-        self.compoundSwitch.onDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
-        self.compoundSwitch.sendDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
+        self.compoundSwitch.onDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
+        self.compoundSwitch.sendDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
 
 
     def setupFrame(self, config):
@@ -223,14 +223,14 @@ class SubscriberStation(Layer2):
     def __init__(self, node, config):
         super(SubscriberStation, self).__init__(node, "SS", config)
         # actually this can be 2 + 2*numberOfRingAssociated to (1. BS, 2. Relay, ...)
-        self.upperconvergence = dll.UpperConvergence.UT()
+        self.upperconvergence = wimac.FUs.UpperConvergence()
         self.stationType = "UT"
 
         # control plane
-        self.rngCompoundSwitch = dll.CompoundSwitch.CompoundSwitch()
-        self.rngCompoundSwitch.onDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
-	self.rngCompoundSwitch.sendDataFilters.append( dll.CompoundSwitch.FilterCommand('RNGCompounds', 'ranging') )
-	self.rngCompoundSwitch.sendDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
+        self.rngCompoundSwitch = wimac.CompoundSwitch.CompoundSwitch()
+        self.rngCompoundSwitch.onDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
+	self.rngCompoundSwitch.sendDataFilters.append( wimac.CompoundSwitch.FilterCommand('RNGCompounds', 'ranging') )
+	self.rngCompoundSwitch.sendDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
 
         # frame elements
         self.framehead = wimac.FrameBuilder.FrameHeadCollector('frameBuilder')
@@ -284,9 +284,9 @@ class SubscriberStation(Layer2):
         self.frameBuilder.connect(self.phyUser)
 
     def setupCompoundSwitch(self):
-	self.compoundSwitch.onDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
-        self.compoundSwitch.sendDataFilters.append( dll.CompoundSwitch.FilterNone('None') )
-	self.compoundSwitch.sendDataFilters.append( dll.CompoundSwitch.FilterAll('All') )
+	self.compoundSwitch.onDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
+        self.compoundSwitch.sendDataFilters.append( wimac.CompoundSwitch.FilterNone('None') )
+	self.compoundSwitch.sendDataFilters.append( wimac.CompoundSwitch.FilterAll('All') )
 
 
     def setupFrame(self, config):

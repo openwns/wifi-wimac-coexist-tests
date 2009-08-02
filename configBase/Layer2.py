@@ -5,8 +5,6 @@ from openwns.Multiplexer import Dispatcher
 from math import ceil
 
 import openwns.ldk
-import dll.Layer2
-import dll.Association
 import wimac.KeyBuilder
 
 from openwns.FUN import FUN, Node
@@ -19,9 +17,8 @@ import openwns.SAR
 import openwns.Tools
 import openwns.FCF
 import openwns.CRC
-import dll.CompoundSwitch
+import wimac.Component
 import wimac.Relay
-import dll.UpperConvergence
 import wimac.FrameBuilder
 import wimac.KeyBuilder
 import wimac.ErrorModelling
@@ -31,13 +28,12 @@ import wimac.MessageExchanger
 import wimac.SetupConnection
 import wimac.Handover
 import wimac.PhyUser
-import dll.Services
 import wimac.Services
 from wimac.ProbeStartStop import ProbeStartStop
-from wimac.FUs import Classifier, BufferDropping, ACKSwitch
+from wimac.FUs import Classifier, ACKSwitch
 
 
-class Layer2(dll.Layer2.Layer2):
+class Layer2(wimac.Component.Component):
     frameBuilder = None
     rngCompoundSwitch = None
 
@@ -87,7 +83,8 @@ class Layer2(dll.Layer2.Layer2):
         self.managementServices.append(
             wimac.Services.ConnectionManager( "connectionManager", "fuReseter" ) )
 
-        interferenceCache = dll.Services.InterferenceCache( "interferenceCache", alphaLocal = 0.2, alphaRemote= 0.05 ) 
+        interferenceCache = wimac.Services.InterferenceCache( 
+            "interferenceCache", alphaLocal = 0.2, alphaRemote= 0.05 ) 
         interferenceCache.notFoundStrategy.averageCarrier = "-88.0 dBm"
         interferenceCache.notFoundStrategy.averageInterference = "-96.0 dBm"
         interferenceCache.notFoundStrategy.deviationCarrier = "0.0 mW"
@@ -104,12 +101,9 @@ class Layer2(dll.Layer2.Layer2):
         self.bufferSep = FlowSeparator(
              wimac.KeyBuilder.CIDKeyBuilder(),
              openwns.FlowSeparator.PrototypeCreator(
-             'buffer', BufferDropping( size = 100,
+             'buffer', openwns.Buffer.Dropping( size = 100,
                                        lossRatioProbeName = "wimac.buffer.lossRatio",
-                                       sizeProbeName = "wimac.buffer.size",
-                                       resetedBitsProbeName = "wimac.buffer.reseted.bits",
-                                       resetedCompoundsProbeName = "wimac.buffer.reseted.compounds"
-                                       )))
+                                       sizeProbeName = "wimac.buffer.size")))
 
         self.branchDispatcher = openwns.ldk.Multiplexer.Dispatcher(opcodeSize = 0)
         # size of CRC command is abused to model overhead due to entire MAC header (48 bit without CRC)
@@ -118,7 +112,7 @@ class Layer2(dll.Layer2.Layer2):
                                CRCsize = config.parametersMAC.pduOverhead,
                                isDropping = False)
         self.errormodelling = wimac.ErrorModelling.ErrorModelling('phyUser','phyUser',PrintMappings=False)
-        self.compoundSwitch = dll.CompoundSwitch.CompoundSwitch()
+        self.compoundSwitch = wimac.CompoundSwitch.CompoundSwitch()
 
         self.phyUser = wimac.PhyUser.PhyUser(
             centerFrequency = config.parametersSystem.centerFrequency,
@@ -132,7 +126,7 @@ class Layer2(dll.Layer2.Layer2):
 
     def buildFUN(self, config):
         #DataPlane
-        self.upperconvergence = Node('upperConvergence', self.upperconvergence)
+        self.upperconvergence = Node(self.upperConvergenceName, self.upperconvergence)
         self.topTpProbe = Node('topTpProbe', self.topTpProbe)
         self.topPProbe = Node('topPProbe', self.topPProbe)
         self.bottomThroughputProbe = Node('bottomThroughputProbe', self.bottomThroughputProbe)
@@ -152,7 +146,7 @@ class Layer2(dll.Layer2.Layer2):
         self.frameBuilder = Node('frameBuilder', self.frameBuilder)
 
         #Dataplane
-        self.compoundSwitch = Node('compoundSwitch', self.compoundSwitch)
+        self.compoundSwitch = Node('compoundSwitchWiMAX', self.compoundSwitch)
 
         self.fun.setFunctionalUnits(
         self.compoundSwitch,
