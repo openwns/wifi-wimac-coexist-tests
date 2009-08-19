@@ -196,6 +196,7 @@ for node in [ss, bs]:
     node.dll.topPProbe.config.incomingDelayProbeName = prefix + rest
     node.dll.crc.config.lossRatioProbeName = "layer2.CRCloss"
     node.dll.crc.config.isDropping = True
+    node.dll.phyUser.config.cirProbeName = "layer2.dataSINR"
     
 
 # one Virtual ARP Zone

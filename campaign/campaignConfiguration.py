@@ -35,17 +35,16 @@ from wrowser.simdb.Parameters import Parameters, Bool, Int, Float, String
 #
 class Set(Parameters):
     Distance = Float()
+    Seed = Int()
     
     WiFiDirection = String()
     WiFiPacketSize = Float()
-    WiFiULTraffic = Float()
-    WiFiDLTraffic = Float()
+    WiFiTraffic = Float()
     WiFiAMC = Bool()
     
     WiMAXDirection = String()
     WiMAXPacketSize = Float()
-    WiMAXULTraffic = Float()
-    WiMAXDLTraffic = Float()
+    WiMAXTraffic = Float()
     WiMAXAMC = Bool()
 
 #
@@ -54,99 +53,21 @@ class Set(Parameters):
 
 params = Set()
 
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'DL'
-        params.WiMAXPacketSize = 3000
-        params.WiMAXULTraffic = 0.0
-        params.WiMAXDLTraffic = 4E6
-        params.WiMAXAMC = False
-        params.write()    
+for d in [5]:
+    for w in xrange(14):  
+        for i in xrange(20):
+            for seed in xrange(10):
+                for dir in ['DL', 'UL', 'Both']:  
+                    params.Distance = d
+                    params.Seed = seed
+                    params.WiFiDirection = 'DL'
+                    params.WiFiPacketSize = 12000
+                    params.WiFiTraffic = 2.5E5 * i
+                    params.WiFiAMC = False
+                
+                    params.WiMAXPacketSize = 3000
+                    params.WiMAXDirection = dir
+                    params.WiMAXTraffic = w * 2.5E5
+                    params.WiMAXAMC = False
+                    params.write()    
 
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'UL'
-        params.WiMAXPacketSize = 3000
-        params.WiMAXULTraffic = 4E6
-        params.WiMAXDLTraffic = 0.0
-        params.WiMAXAMC = False
-        params.write()    
-
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'Both'
-        params.WiMAXPacketSize = 3000
-        params.WiMAXULTraffic = 4E6
-        params.WiMAXDLTraffic = 4E6
-        params.WiMAXAMC = False
-        params.write()    
-    
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'DL'
-        params.WiMAXPacketSize = 12000
-        params.WiMAXULTraffic = 0.0
-        params.WiMAXDLTraffic = 4E6
-        params.WiMAXAMC = False
-        params.write()    
-
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'UL'
-        params.WiMAXPacketSize = 12000
-        params.WiMAXULTraffic = 4E6
-        params.WiMAXDLTraffic = 0.0
-        params.WiMAXAMC = False
-        params.write()    
-
-for d in [2, 5, 25, 50, 75, 100]:
-    for i in xrange(20):
-        params.Distance = d
-        params.WiFiDirection = 'DL'
-        params.WiFiPacketSize = 12000
-        params.WiFiULTraffic = 0.0
-        params.WiFiDLTraffic = 2.5E5 + 2.5E5 * i
-        params.WiFiAMC = False
-    
-        params.WiMAXDirection = 'Both'
-        params.WiMAXPacketSize = 12000
-        params.WiMAXULTraffic = 4E6
-        params.WiMAXDLTraffic = 4E6
-        params.WiMAXAMC = False
-        params.write()    
-    

@@ -89,9 +89,9 @@ class Config(object):
     distanceAP_BS = 1.0
     frequency = 5470.0 #GHz
     
-    simTime = 10.0
+    simTime = 0.5
     # When should probing start?
-    settlingTime = 3.0
+    settlingTime = 0.05
     configWiMAX = ConfigWiMAX()
     configWiFi = ConfigWiFi()
 
@@ -115,11 +115,48 @@ WNS.outputStrategy = openwns.simulator.OutputStrategy.DELETE
 WNS.statusWriteInterval = 30 # in seconds
 WNS.probesWriteInterval = 60 # in seconds
 
-def bySystemStaTypeId(node, wifiIds, wimaxIds, wifiPDUContext = False):
+# ProbeBus:
+#                                                             /---IdX---PDF
+#                                                            /      .
+#                                                  /---STA---       .
+#                                                 /          \      .
+#                                                /            \---IdY---PDF      
+#                               /---WiFi---PDF---
+#                              /                \---AP---PDF
+# source---SettlingTime--PDF---
+#                              \                /---BS---PDF
+#                               \---WiMAC--PDF---
+#                                                \           /---IdA---PDF
+#                                                 \         /      .
+#                                                  \---SS---       .
+#                                                           \      .
+#                                                            \---IdB---PDF
+
+def bySystemStaTypeIdProbe(node, 
+                      wifiIds, 
+                      wimaxIds, 
+                      minX, 
+                      maxX, 
+                      resolution = 1000, 
+                      probeType = "Moments",
+                      wifiPDUContext = False):
+  
+    if probeType == "Moments":
+        probe = openwns.evaluation.generators.Moments()
+    elif probeType == "PDF":
+        probe = openwns.evaluation.generators.PDF(
+            minXValue = p.minX, maxXValue = p.maxX, resolution = p.resolution)
+    else:
+        assert False, "Unknown probe type " + probeType
+  
+    # Global probe for both systems
+    node.getLeafs().appendChildren(probe)           
+
     wifiNode = node.appendChildren(openwns.evaluation.generators.Accept(
                         by = 'MAC.Id', 
                         ifIn = wifiIds, 
                         suffix = 'WiFi'))
+                        
     if wifiPDUContext:
         wifiNode.getLeafs().appendChildren(openwns.evaluation.generators.Accept(
                             by = 'MAC.CompoundIsForMe', 
@@ -127,6 +164,10 @@ def bySystemStaTypeId(node, wifiIds, wimaxIds, wifiPDUContext = False):
         wifiNode = wifiNode.getLeafs().appendChildren(openwns.evaluation.generators.Accept(
                             by = 'MAC.CompoundIsUnicast', 
                             ifIn = [1]))
+                           
+    # WiFi probe for both station types
+    wifiNode.getLeafs().appendChildren(probe)            
+                                                       
     bsNode = wifiNode.appendChildren(openwns.evaluation.generators.Accept(
                         by = 'MAC.StationType', 
                         ifIn = [1], suffix = 'BS'))
@@ -146,6 +187,10 @@ def bySystemStaTypeId(node, wifiIds, wimaxIds, wifiPDUContext = False):
                         by = 'MAC.Id', 
                         ifIn = wimaxIds, 
                         suffix = 'WiMAX'))
+                        
+    # WiMAC probe for both station types
+    wimaxNode.getLeafs().appendChildren(probe)                         
+                        
     bsNode = wimaxNode.appendChildren(openwns.evaluation.generators.Accept(
                         by = 'MAC.StationType', 
                         ifIn = [1], suffix = 'BS'))
@@ -159,8 +204,11 @@ def bySystemStaTypeId(node, wifiIds, wimaxIds, wifiPDUContext = False):
     utNode.appendChildren(openwns.evaluation.generators.Separate(
                         by = 'MAC.Id', 
                         forAll = wimaxIds[1:], 
-                        format = 'Id%d')) 
-
+                        format = 'Id%d'))
+                         
+    # Final PDF
+    node.getLeafs().appendChildren(probe)
+    
 ####################################################
 ### PHY (PHysical Layer) settings                  #
 ####################################################
@@ -196,32 +244,35 @@ maxUL = max(config.configWiMAX.trafficUL, config.configWiFi.trafficUL)
 wifiIds = apIDs + staIDs
 wimaxIds = bsIDs + ssIDs 
 
-class PDFProbe(object):
+class ProbeData(object):
     name = None
     minX = None
     maxX = None
     resolution = None
+    probeType = None
     wifiPDUContext = None
         
-    def __init__(self, name, minX, maxX, resolution = 1000, wifiPDUContext = False):
+    def __init__(self, name, minX, maxX, resolution = 1000, probeType = "Moments", wifiPDUContext = False):
         self.name = name
         self.minX = minX
         self.maxX = maxX
         self.resolution = resolution
+        self.probeType = probeType
         self.wifiPDUContext = wifiPDUContext
 
 probes = []
-probes.append(PDFProbe("layer2.window.incoming.bitThroughput", 0.0, 100E6, 10000))
-probes.append(PDFProbe("layer2.packet.incoming.delay", 0.0, 1.0, 10000))
-probes.append(PDFProbe("layer2.CRCloss", 0.0, 1.0, 1))
-probes.append(PDFProbe("layer2.dataSINR", -200, 200, 4000, True))
+probes.append(ProbeData("layer2.window.incoming.bitThroughput", 0.0, 100E6, 10000, "PDF"))
+probes.append(ProbeData("layer2.packet.incoming.delay", 0.0, 1.0, 10000, "PDF"))
+probes.append(ProbeData("layer2.CRCloss", 0.0, 1.0, 1, "PDF"))
+probes.append(ProbeData("layer2.dataSINR", -200, 200, 4000, "PDF", True))
 
 for p in probes:
     node = openwns.evaluation.createSourceNode(WNS, p.name)
-    bySystemStaTypeId(node, wifiIds, wimaxIds, p.wifiPDUContext)
     node.getLeafs().appendChildren(
-        openwns.evaluation.generators.PDF(
-            minXValue = p.minX, maxXValue = p.maxX, resolution = p.resolution))
+        openwns.evaluation.generators.SettlingTimeGuard(
+            config.settlingTime))
+    bySystemStaTypeIdProbe(node, wifiIds, wimaxIds, p.minX, p.maxX, 
+                            p.resolution, p.probeType, p.wifiPDUContext)
         
 openwns.setSimulator(WNS)
 print "\n"
