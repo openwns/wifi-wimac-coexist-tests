@@ -80,8 +80,8 @@ class Config(object):
         distance_AP_STA = 50.0                
         trafficULenabled = False
         trafficDLenabled = True
-        trafficUL = 5E6
-        trafficDL = 5E6
+        trafficUL = 2E6
+        trafficDL = 2E6
         packetSize = 12000.0
         
         # If False only 5Mbps is used no mather what channel estimation decides
