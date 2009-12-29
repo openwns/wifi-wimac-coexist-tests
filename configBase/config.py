@@ -26,106 +26,190 @@
 ###############################################################################
 import os
 import sys
-sys.path.append(os.path.join('.','commonConfig'))
-sys.path.append(os.path.join('..','commonConfig'))
 
 import rise
-import openwns.node
 import openwns
 import openwns.evaluation.default
-import constanze.traffic
-import ip.IP
-import ip.AddressResolver
-from ip.VirtualARP import VirtualARPServer
-from ip.VirtualDHCP import VirtualDHCPServer
-from ip.VirtualDNS import VirtualDNSServer
+import openwns.evaluation.generators
+import openwns.evaluation.tree
+from openwns.pyconfig import Frozen
+from openwns.pyconfig import Sealed
 
 import ofdmaphy.OFDMAPhy
 import rise.Scenario
 import rise.Mobility
-from constanze.node import IPBinding, IPListenerBinding, Listener
-from openwns.pyconfig import Frozen
-from openwns.pyconfig import Sealed
-
-import Nodes
-import Layer2
-import wimac.KeyBuilder as CIDKeyBuilder
-import wimac.evaluation.default
-
-from support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
-from support.scenarioSupport import setupRelayScenario
-from support.scenarioSupport import calculateScenarioRadius, numberOfAccessPointsForHexagonalScenario
-import support.PostProcessor as PostProcessor
 
 import random
 random.seed(7)
 
+# Scenario: 
+# 1 WiFi AP with 1 STA at fixed distance "distance_AP_STA"
+# 1 WiMAX BS with 1 SS at fixed distance "distance_BS_SS"
+# Distance "distanceAP_BS" between BS and AP
+#
+#
+#  [x,y,z]=[0,0,0]   
+#         |
+#         V        distanceAP_BS
+#      AP O<------------------------>X BS
+#         ^                          ^
+#         |                          |
+#         |distance_AP_STA           |distance_BS_SS
+#         |                          |
+#         v                          v
+#     STA o                          x SS
+#
 
-associations = {}
+class Config(object):
+    
+    class ConfigWiMAX(object):
+        distance_BS_SS = 50.0
+        
+        # Even if False we transmit one packet to establish flow
+        trafficULenabled = True     
+        trafficDLenabled = True
+        trafficUL = 3E6
+        trafficDL = 3E6
+        packetSize = 50.0
+        
+        # If False only BPSK 1/2 is used no mather what channel estimation decides
+        adaptiveMCS = False
+        probeWindowSize = 0.01 # Probe per frame
+    
+    class ConfigWiFi(object):
+        distance_AP_STA = 50.0                
+        trafficULenabled = False
+        trafficDLenabled = True
+        trafficUL = 5E6
+        trafficDL = 5E6
+        packetSize = 12000.0
+        
+        # If False only 5Mbps is used no mather what channel estimation decides
+        adaptiveMCS = False          
+    
+    distanceAP_BS = 1.0
+    frequency = 5470.0 #GHz
+    
+    simTime = 0.2
+    # When should probing start?
+    settlingTime = 0.05
+    configWiMAX = ConfigWiMAX()
+    configWiFi = ConfigWiFi()
 
-####################################################
-###  Distinguished Simulation Settings             #
-####################################################
-class Config(Frozen):
-    # Set basic WiMAX Parameters
-    parametersSystem      = ParametersSystem
-    parametersPhy         = ParametersOFDM
-    parametersMAC         = ParametersMAC
-    parametersPropagation = ParametersPropagation
+config = Config()
 
-    # WiMAC Layer2 forming
-    beamforming = False
-    maxBeams = 1
-    friendliness_dBm = "-85 dBm"
-    maxBursts = 20
+firstWiFiID = 100    
 
-    #only considered for mapsizes not synchronized with actual scheduling strategy
-    dlStrategy = "ProportionalFairDL"
-    ulStrategy = "ProportionalFairUL"
-
-    arrayLayout = "linear" #"circular"
-    eirpLimited = False
-    positionErrorVariance = 0.0
-
-    packetSize = 3000 #in bit
-    trafficUL = 10000000 # bit/s per station
-    trafficDL = 10000000
-
-    nSectors = 1
-    nCircles = 0
-    nBSs = numberOfAccessPointsForHexagonalScenario(nCircles)
-    nRSs = 0
-    nSSs = 1
-    nRmSs = 0
-
-    numberOfStations =  nBSs * ( nRSs + nSSs + nRmSs * nRSs + 1 )
-
-    scenarioXSize = 500#2 * calculateScenarioRadius(parametersSystem.clusterOrder, nCircles, parametersSystem.cellRadius)
-    scenarioYSize = 500#scenarioXSize
-
-    RSDistance = parametersSystem.cellRadius / 2.0
-
-    writeOutput = True
-    operationModeRelays = 'SDM' #'TDM' 'FDM'
-
-#config = Config()
-####################################################
-# General Simulation settings                      #
-####################################################
-
-# create an instance of the WNS configuration
-# The variable must be called WNS!!!!
+if not config.configWiFi.trafficDLenabled:
+    config.configWiFi.trafficDL = 0.0
+if not config.configWiFi.trafficULenabled:
+    config.configWiFi.trafficUL = 0.0
+if not config.configWiMAX.trafficDLenabled:
+    config.configWiMAX.trafficDL = 0.0
+if not config.configWiMAX.trafficULenabled:
+    config.configWiMAX.trafficUL = 0.0
+    
 WNS = openwns.Simulator(simulationModel = openwns.node.NodeSimulationModel())
-WNS.maxSimTime = 0.1 # seconds
-#Probe settings
-WNS.masterLogger.backtrace.enabled = False
+WNS.maxSimTime = config.simTime # seconds
 WNS.masterLogger.enabled = True
-#WNS.masterLogger.loggerChain = [ wns.Logger.FormatOutputPair( wns.Logger.Console(), wns.Logger.File()) ]
 WNS.outputStrategy = openwns.simulator.OutputStrategy.DELETE
-WNS.statusWriteInterval = 120 # in seconds
-WNS.probesWriteInterval = 3600 # in seconds
+WNS.statusWriteInterval = 30 # in seconds
+WNS.probesWriteInterval = 60 # in seconds
 
+# ProbeBus:
+#                                                             /---IdX---PDF
+#                                                            /      .
+#                                                  /---STA---       .
+#                                                 /          \      .
+#                                                /            \---IdY---PDF      
+#                               /---WiFi---PDF---
+#                              /                \---AP---PDF
+# source---SettlingTime--PDF---
+#                              \                /---BS---PDF
+#                               \---WiMAC--PDF---
+#                                                \           /---IdA---PDF
+#                                                 \         /      .
+#                                                  \---SS---       .
+#                                                           \      .
+#                                                            \---IdB---PDF
 
+def bySystemStaTypeIdProbe(node, 
+                      wifiIds, 
+                      wimaxIds, 
+                      minX, 
+                      maxX, 
+                      resolution = 1000, 
+                      probeType = "Moments",
+                      wifiPDUContext = False):
+  
+    if probeType == "Moments":
+        probe = openwns.evaluation.generators.Moments()
+    elif probeType == "PDF":
+        probe = openwns.evaluation.generators.PDF(
+            minXValue = p.minX, maxXValue = p.maxX, resolution = p.resolution)
+    else:
+        assert False, "Unknown probe type " + probeType
+  
+    # Global probe for both systems
+    node.getLeafs().appendChildren(probe)           
+
+    wifiNode = node.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.Id', 
+                        ifIn = wifiIds, 
+                        suffix = 'WiFi'))
+                        
+    if wifiPDUContext:
+        wifiNode.getLeafs().appendChildren(openwns.evaluation.generators.Accept(
+                            by = 'MAC.CompoundIsForMe', 
+                            ifIn = [1]))
+        wifiNode = wifiNode.getLeafs().appendChildren(openwns.evaluation.generators.Accept(
+                            by = 'MAC.CompoundIsUnicast', 
+                            ifIn = [1]))
+                           
+    # WiFi probe for both station types
+    wifiNode.getLeafs().appendChildren(probe)            
+                                                       
+    bsNode = wifiNode.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.StationType', 
+                        ifIn = [1], suffix = 'BS'))
+    utNode = wifiNode.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.StationType', 
+                        ifIn = [3], suffix = 'UT'))
+    bsNode.appendChildren(openwns.evaluation.generators.Separate(
+                        by = 'MAC.Id', 
+                        forAll = [wifiIds[0]], 
+                        format = 'Id%d'))
+    utNode.appendChildren(openwns.evaluation.generators.Separate(
+                        by = 'MAC.Id', 
+                        forAll = wifiIds[1:], 
+                        format = 'Id%d'))
+                                              
+    wimaxNode = node.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.Id', 
+                        ifIn = wimaxIds, 
+                        suffix = 'WiMAX'))
+                        
+    # WiMAC probe for both station types
+    wimaxNode.getLeafs().appendChildren(probe)                         
+                        
+    bsNode = wimaxNode.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.StationType', 
+                        ifIn = [1], suffix = 'BS'))
+    utNode = wimaxNode.appendChildren(openwns.evaluation.generators.Accept(
+                        by = 'MAC.StationType', 
+                        ifIn = [3], suffix = 'UT'))
+    bsNode.appendChildren(openwns.evaluation.generators.Separate(
+                        by = 'MAC.Id', 
+                        forAll = [wimaxIds[0]], 
+                        format = 'Id%d'))
+    utNode.appendChildren(openwns.evaluation.generators.Separate(
+                        by = 'MAC.Id', 
+                        forAll = wimaxIds[1:], 
+                        format = 'Id%d'))
+                         
+    # Final PDF
+    node.getLeafs().appendChildren(probe)
+    
 ####################################################
 ### PHY (PHysical Layer) settings                  #
 ####################################################
@@ -134,271 +218,66 @@ riseConfig.debug.transmitter = False
 riseConfig.debug.main = False
 riseConfig.debug.antennas = False
 
-# from ./modules/phy/OFDMAPhy--unstable--0.3/PyConfig/ofdmaphy/OFDMAPhy.py
+scenario = rise.Scenario.Scenario()
+
 ofdmaPhyConfig = WNS.modules.ofdmaPhy
 ofdmaPhySystem = ofdmaphy.OFDMAPhy.OFDMASystem('ofdma')
-ofdmaPhySystem.Scenario = rise.Scenario.Scenario()
+ofdmaPhySystem.Scenario = scenario
 ofdmaPhyConfig.systems.append(ofdmaPhySystem)
 
-####################################################
-### WiMAC settings                                 #
-####################################################
+execfile('configWiFi.py')
+execfile('configWiMAC.py')
 
-WNS.modules.wimac.parametersPHY = Config.parametersPhy
+# Use WiFi channel model for WiMAX
+ss.phy.ofdmaStation.receiver = sta.phy.ofdmaStation.receiver
+ss.phy.ofdmaStation.transmitter = sta.phy.ofdmaStation.transmitter
+bs.phy.ofdmaStation.receiver = ap.phy[0].ofdmaStation.receiver
+bs.phy.ofdmaStation.transmitter = ap.phy[0].ofdmaStation.transmitter
 
-####################################################
-### Instantiating Nodes and setting Traffic        #
-####################################################
-# one RANG
-rangWiMAX = Nodes.RANG()
 
-# BSs with some SSs each
+maxDL = max(config.configWiMAX.trafficDL, config.configWiFi.trafficDL)
+maxUL = max(config.configWiMAX.trafficUL, config.configWiFi.trafficUL)
 
-def stationID():
-    id = 1
-    while (True):
-        yield id
-        id += 1
+wifiIds = apIDs + staIDs
+wimaxIds = bsIDs + ssIDs 
 
-stationIDs = stationID()
-
-accessPoints = []
-
-for i in xrange(Config.nBSs):
-    bs = Nodes.BaseStation(stationIDs.next(), Config)
-    bs.dll.logger.level = 2
-    accessPoints.append(bs)
-    associations[bs]=[]
-    WNS.simulationModel.nodes.append(bs)
-
-# The RANG only has one IPListenerBinding that is attached
-# to the listener. The listener is the only traffic sink
-# within the RANG
-ipListenerBinding = IPListenerBinding(rangWiMAX.nl.domainName)
-listener = Listener(rangWiMAX.nl.domainName + ".listener")
-rangWiMAX.load.addListener(ipListenerBinding, listener)
-
-userTerminals = []
-k = 0
-for bs in accessPoints:
-    for i in xrange(Config.nSSs):
-        ss = Nodes.SubscriberStation(stationIDs.next(), Config)
-        poissonDL = constanze.traffic.Poisson(offset = 0.05, throughput = Config.trafficDL, packetSize = Config.packetSize)
-        ipBinding = IPBinding(rangWiMAX.nl.domainName, ss.nl.domainName)
-        rangWiMAX.load.addTraffic(ipBinding, poissonDL)
+class ProbeData(object):
+    name = None
+    minX = None
+    maxX = None
+    resolution = None
+    probeType = None
+    wifiPDUContext = None
         
-        poissonUL = constanze.traffic.Poisson(offset = 0.0, throughput = Config.trafficUL, packetSize = Config.packetSize)
-        ipBinding = IPBinding(ss.nl.domainName, rangWiMAX.nl.domainName)
-        ss.load.addTraffic(ipBinding, poissonUL)
-        ipListenerBinding = IPListenerBinding(ss.nl.domainName)
-        listener = Listener(ss.nl.domainName + ".listener")
-        ss.load.addListener(ipListenerBinding, listener)
-        ss.dll.associate(bs.dll)
-        associations[bs].append(ss)
-        userTerminals.append(ss)
-        WNS.simulationModel.nodes.append(ss)
-    rangWiMAX.dll.addAP(bs)
-    k += 1
+    def __init__(self, name, minX, maxX, resolution = 1000, probeType = "Moments", wifiPDUContext = False):
+        self.name = name
+        self.minX = minX
+        self.maxX = maxX
+        self.resolution = resolution
+        self.probeType = probeType
+        self.wifiPDUContext = wifiPDUContext
 
-# each access point is connected to some fixed relay stations
-k = 0
-relayStations = []
-for bs in accessPoints:
-    l = 0
-    for i in xrange(Config.nRSs):
-        rs = Nodes.RelayStation(stationIDs.next(), Config)
-        rs.dll.associate(bs.dll)
-        associations[rs]=[]
-        associations[bs].append(rs)
-        relayStations.append(rs)
-        WNS.simulationModel.nodes.append(rs)
+probes = []
+probes.append(ProbeData("layer2.window.incoming.bitThroughput", 0.0, 100E6, 10000, "PDF"))
+probes.append(ProbeData("layer2.window.aggregated.bitThroughput", 0.0, 100E6, 10000, "PDF"))
+probes.append(ProbeData("layer2.packet.incoming.delay", 0.0, 1.0, 10000, "PDF"))
+probes.append(ProbeData("layer2.CRCloss", 0.0, 1.0, 1, "PDF"))
+probes.append(ProbeData("layer2.dataSINR", -200, 200, 4000, "PDF", True))
 
-        l += 1
-    k += 1
-
-# each relay station is connected to some remote stations
-remoteStations = []
-k = 0
-for bs in accessPoints:
-    l = 0
-    for rs in associations[bs]:
-        if rs.dll.stationType != 'FRS':
-            continue
-        i = 0
-        for i in xrange(Config.nRmSs):
-            ss = Nodes.SubscriberStation(stationIDs.next(), Config)
-            ss.dll.logger.level = 2
-            cbrDL = constanze.traffic.CBR(offset = 0.05, throughput = Config.trafficDL, packetSize = Config.packetSize)
-            ipBinding = IPBinding(rangWiMAX.nl.domainName, ss.nl.domainName)
-            rangWiMAX.load.addTraffic(ipBinding, cbrDL)
-
-            cbrUL = constanze.traffic.CBR(offset = 0.0, throughput = Config.trafficUL, packetSize = Config.packetSize)
-            ipBinding = IPBinding(ss.nl.domainName, rangWiMAX.nl.domainName)
-            ss.load.addTraffic(ipBinding, cbrUL)
-            ipListenerBinding = IPListenerBinding(ss.nl.domainName)
-            listener = Listener(ss.nl.domainName + ".listener")
-            ss.load.addListener(ipListenerBinding, listener)
-
-            ss.dll.associate(rs.dll)
-            # 192.168.1.254 = "nl address of RANG" = rangWiMAX.nl.address ?
-            associations[rs].append(ss)
-            remoteStations.append(ss)
-            WNS.simulationModel.nodes.append(ss)
-        l += 1
-    k += 1
-
-WNS.simulationModel.nodes.append(rangWiMAX)
-
-# Positions of the stations are determined here
-setupRelayScenario(Config, WNS.simulationModel.nodes, associations)
-
-#set mobility
-intracellMobility = False
-
-if(intracellMobility):
-
-    for ss in userTerminals:
-        associatedBS = None
-        for bs in accessPoints:
-            if bs.dll.stationID == ss.dll.associateTo:
-                associatedBS = bs
-                bsPos = associatedBS.mobility.mobility.getCoords()
-                break
-        if associatedBS == None:
-            print 'no associated BS found'
-            exit(1)
-
-        # too large, SS might be outside the hexagon
-        maxDistance_ = Config.parametersSystem.cellRadius
-        # too small, corners are not filled
-        # maxDistance_ = (math.sqrt(3.0)/2.0) * Config.parametersSystem.cellRadius
-        # equal area
-        # maxDistance_ = math.sqrt( 3.0/2.0/math.pi*math.sqrt(3.0)) * Config.parametersSystem.cellRadius
-        ss.mobility.mobility = rise.Mobility.BrownianCirc(center=bsPos,
-                                                          maxDistance = maxDistance_ )
-
-# TODO: for multihop simulations: replicate the code for remote stations
-
-#plotStations.plot()
-
-
-# Here we specify the stations we want to probe.
-# This is usually only the center cell with the BS and its associated stations.
-loggingStationIDs = []
-pos = accessPoints[0].mobility.mobility.getCoords()
-print "Created BS at (" + str(pos) + ")"
-
-
-for st in associations[accessPoints[0]]:
-    if st.dll.stationType == 'FRS':
-        loggingStationIDs.append(st.dll.stationID)
-        for st2 in associations[st]:
-            if st2.dll.stationType == 'UT':
-                loggingStationIDs.append(st2.dll.stationID)
-
-    if st.dll.stationType == 'UT':
-        loggingStationIDs.append(st.dll.stationID)
-        pos = st.mobility.mobility.getCoords()
-        print "Created SS at (" + str(pos) + ")"
-
-wimac.evaluation.default.installEvaluation(WNS, [1], loggingStationIDs)
-openwns.evaluation.default.installEvaluation(WNS)
-
-# one Virtual ARP Zone
-varpWiMAX = VirtualARPServer("vARP", "WIMAXRAN")
-WNS.simulationModel.nodes = [varpWiMAX] + WNS.simulationModel.nodes
-
-vdhcpWiMAX = VirtualDHCPServer("vDHCP@",
-                          "WIMAXRAN",
-                          "192.168.0.2", "192.168.254.253",
-                          "255.255.0.0")
-
-vdnsWiMAX = VirtualDNSServer("vDNS", "ip.DEFAULT.GLOBALWiMAX")
-WNS.simulationModel.nodes.append(vdnsWiMAX)
-
-WNS.simulationModel.nodes.append(vdhcpWiMAX)
-
-### PostProcessor ###
-postProcessor = PostProcessor.WiMACPostProcessor()
-postProcessor.Config = Config
-postProcessor.accessPoints = accessPoints
-postProcessor.relayStations = relayStations
-postProcessor.userTerminals = userTerminals
-postProcessor.remoteStations = remoteStations
-WNS.addPostProcessing(postProcessor)
-
-import openwns
-
-import wifimac.support.Transceiver
-
-#######################
-# Simulation parameters
-#
-# Simulation of the string topology: all nodes are placed equidistantly
-# on a string, on each end of the string, an AP is positioned
-# Traffic is either DL only or bidirectional
-#
-simTime = 0.000001
-settlingTime = 3.0
-commonLoggerLevel = 1
-dllLoggerLevel = 2
-
-# length of the string
-numMPs = 0
-numSTAs = 1
-numAPs = 1
-distanceBetweenMPs = 50
-verticalDistanceSTAandMP = 10
-
-# load
-meanPacketSize = 1480 * 8
-offeredDL = 6.0e6
-offeredUL = 0.0e6
-ulIsActive = False
-dlIsActive = True
-startDelayUL = 1.01
-startDelayDL = 1.02
-# wether MPs send/receive traffic
-activeMPs = False
-
-# Available frequencies for bss and backbone, in MHz
-meshFrequency = 5500
-bssFrequencies = [5470]
-# End simulation parameters
-###########################
-
-####################
-# Node configuration
-
-# configuration class for AP and MP mesh transceivers
-class MyMeshTransceiver(wifimac.support.Transceiver.Mesh):
-    def __init__(self, beaconDelay, frequency):
-        super(MyMeshTransceiver, self).__init__(frequency)
-        # changes to the default config
-        self.layer2.beacon.delay = beaconDelay
-
-# configuration class for AP and MP BSS transceivers
-class MyBSSTransceiver(wifimac.support.Transceiver.Mesh):
-    def __init__(self, beaconDelay, frequency):
-        super(MyBSSTransceiver, self).__init__(frequency)
-        self.layer2.beacon.delay = beaconDelay
-        self.layer2.rtsctsThreshold = 800#1e6*8
-        self.layer2.txop.txopLimit = 0.01
-
-# configuration class for STAs
-class MySTAConfig(wifimac.support.Transceiver.Station):
-    def __init__(self, initFrequency, position, scanFrequencies, scanDurationPerFrequency):
-        super(MySTAConfig, self).__init__(frequency = initFrequency,
-                                          position = position,
-                                          scanFrequencies = scanFrequencies,
-                                          scanDuration = scanDurationPerFrequency)
-        self.layer2.rtsctsThreshold = 800#1e6*8
-
-# End node configuration
-########################
-
-###########################################
-# Scenario setup etc. is in configCommon.py
-execfile('configCommon.py')
-print accessPoints[0].dll.upperConvergenceName
-print userTerminals[0].dll.upperConvergenceName
+for p in probes:
+    node = openwns.evaluation.createSourceNode(WNS, p.name)
+    node.getLeafs().appendChildren(
+        openwns.evaluation.generators.SettlingTimeGuard(
+            config.settlingTime))
+    bySystemStaTypeIdProbe(node, wifiIds, wimaxIds, p.minX, p.maxX, 
+                            p.resolution, p.probeType, p.wifiPDUContext)
+        
+openwns.setSimulator(WNS)
+print "\n"
+print " " + str(config.configWiFi.trafficDL / 1E6) + "Mbps" + "          " + str(config.configWiMAX.trafficDL / 1E6) + "Mbps"  
+print "  AP-----" + str(config.distanceAP_BS) + "m-----BS"
+print "  |                 |"
+print " " + str(config.configWiFi.distance_AP_STA) + "m            " + str(config.configWiMAX.distance_BS_SS) + "m"
+print "  |                 |"
+print " STA                SS"
+print " " + str(config.configWiFi.trafficUL / 1E6) + "Mbps" + "          " + str(config.configWiMAX.trafficUL / 1E6) + "Mbps"  

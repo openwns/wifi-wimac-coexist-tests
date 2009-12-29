@@ -129,6 +129,12 @@ def getDataSubcarrierPerSubChannel(subcarrierAllocation, fftSize):
 ###############################################################################
 
 class ParametersSystem(Frozen):
+    height = {}
+    numberOfAntennaRxTx = {}
+    antennaArrayLayout = {}
+    txPower = {}
+    noiseFigure = {}                                      
+                                      
                                       # ---Comments----------------------------
     centerFrequency = 5470  # [MHz]   # Not used at the moment by the WiMAC
                                       # implicitely modeled by the propagation model
@@ -137,27 +143,27 @@ class ParametersSystem(Frozen):
     cellRadius  = 750  # [meter]     # (verified 0)
     clusterOrder = 7                   # [cells per cluster]
 
-    heightAP  = 5.0  # [meter]        # (verified 0)
-    heightFRS = 5.0  # [meter]        # (verified 0)
-    heightUT  = 1.5  # [meter]        # (verified 1)
+    height['AP']  = 5.0  # [meter]        # (verified 0)
+    height['FRS'] = 5.0  # [meter]        # (verified 0)
+    height['UT']  = 1.5  # [meter]        # (verified 1)
 
     # in the future differentiate between Tx (SS:1) and Rx antennas (SS:2)
-    numberOfAntennaAPRxTx  = 4        # (verified 0)
-    numberOfAntennaFRSRxTx = 4        # (verified 0)
-    numberOfAntennaUTRxTx  = 1        # (verified 0)
+    numberOfAntennaRxTx['AP']  = 4        # (verified 0)
+    numberOfAntennaRxTx['FRS'] = 4        # (verified 0)
+    numberOfAntennaRxTx['UT']  = 1        # (verified 0)
 
     #this has currently no influence, layout is read directly from config.py
-    antennaArrayLayoutAP  = "linear"  #  (verified 0)
-    antennaArrayLayoutFRS = "linear"  #  (verified 0)
-    antennaArrayLayoutUT  = "linear"  #  (verified 0)
+    antennaArrayLayout['AP']  = "circular"  #  (verified 0)
+    antennaArrayLayout['FRS'] = "circular"  #  (verified 0)
+    antennaArrayLayout['UT']  = "circular"  #  (verified 0)
 
-    txPowerAP  = dBm(30) # [dBm]      # (verified 0)
-    txPowerFRS = dBm(30) # [dBm]      # (verified 0)
-    txPowerUT  = dBm(30) # [dBm]      # (verified 0)
+    txPower['AP']  = dBm(30) # [dBm]      # (verified 0)
+    txPower['FRS'] = dBm(30) # [dBm]      # (verified 0)
+    txPower['UT']  = dBm(30) # [dBm]      # (verified 0)
 
-    noiseFigureAP  = dB(5) # [dB]     # (verified 0)
-    noiseFigureFRS = dB(5) # [dB]     # (verified 0)
-    noiseFigureUT  = dB(5) # [dB]     # (verified 0)
+    noiseFigure['AP']  = dB(5) # [dB]     # (verified 0)
+    noiseFigure['FRS'] = dB(5) # [dB]     # (verified 0)
+    noiseFigure['UT']  = dB(5) # [dB]     # (verified 0)
 
 
 
@@ -212,6 +218,10 @@ class ParametersOFDM(Frozen):
     # (verified 3)
     ######
 
+    slotDuration = 3.0 * symbolDuration
+    # [sec]   (Ts=Tb+Tg)
+    # (verified 3)
+    ######
     frameDuration = 0.010
     # [sec]   (Tf)
     ######
@@ -314,6 +324,8 @@ class ParametersOFDMA(Frozen):
     # [sec]   (Ts=Tb+Tg)
     # (verified 3)
     ######
+
+    slotDuration = 3 * symbolDuration
 
     frameDuration = 0.005
     # [sec]   (Tf)
