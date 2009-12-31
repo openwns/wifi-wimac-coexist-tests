@@ -70,7 +70,7 @@ class Config(object):
         trafficDLenabled = True
         trafficUL = 3E6
         trafficDL = 3E6
-        packetSize = 50.0
+        packetSize = 240.0 # Max 240 if noIPHeader = True, else 80
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
         adaptiveMCS = False
@@ -78,8 +78,8 @@ class Config(object):
     
     class ConfigWiFi(object):
         distance_AP_STA = 50.0                
-        trafficULenabled = False
-        trafficDLenabled = True
+        trafficULenabled = True
+        trafficDLenabled = False
         trafficUL = 2E6
         trafficDL = 2E6
         packetSize = 12000.0
@@ -89,8 +89,9 @@ class Config(object):
     
     distanceAP_BS = 1.0
     frequency = 5470.0 #GHz
+    noIPHeader = True #Set to true to set IP header to 0
     
-    simTime = 0.2
+    simTime = 0.5
     # When should probing start?
     settlingTime = 0.05
     configWiMAX = ConfigWiMAX()

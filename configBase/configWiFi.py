@@ -110,6 +110,10 @@ nc = wifimac.support.NodeCreator(propagationConfig)
 
 # one RANG
 rang = nc.createRANG(listener = config.configWiFi.trafficULenabled, loggerLevel = commonLoggerLevel)
+
+if config.noIPHeader:
+  rang.nl.ipHeader.config.headerSize = 0
+
 WNS.simulationModel.nodes.append(rang)
 
 # create (magic) service nodes for ARP, DNS, Pathselection, Capability Information
@@ -156,6 +160,11 @@ sta = nc.createSTA(idGen, managerPool, rang,
                     config = staConfig,
                     loggerLevel = commonLoggerLevel,
                     dllLoggerLevel = dllLoggerLevel)
+                                        
+if config.noIPHeader:
+    sta.nl.ipHeader.config.headerSize = 0
+
+                    
 print "Created STA at (" + str(staPos) + ")"
 
 if(config.configWiFi.trafficDLenabled):

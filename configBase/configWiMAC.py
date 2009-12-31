@@ -67,6 +67,7 @@ class Conf(Frozen):
     parametersSystem      = ParametersSystem
     parametersPhy         = ParametersOFDM
     parametersMAC         = ParametersMAC
+    
     parametersPropagation = ParametersPropagation
     
     # WiMAC Layer2 forming
@@ -96,6 +97,10 @@ WNS.modules.wimac.parametersPHY = Conf.parametersPhy
 ####################################################
 # one RANG
 rangWiMAX = wimac.support.Nodes.RANG()
+                                        
+if config.noIPHeader:
+    rangWiMAX.nl.ipHeader.config.headerSize = 0
+
 
 # BSs with some SSs each
 
@@ -114,6 +119,9 @@ bs = wimac.support.Nodes.BaseStation(stationIDs.next(), Conf)
 # Use the Bypass Queue
 # DL Master
 bs.dll.dlscheduler.config.txScheduler.queue = wimac.Scheduler.BypassQueue()
+
+if config.noIPHeader:
+    bs.dll.ulscheduler.config.rxScheduler.pseudoGenerator.pduOverhead -= 160
 
 bs.phy.ofdmaStation.rxFrequency = config.frequency
 bs.phy.ofdmaStation.txFrequency = config.frequency
@@ -138,7 +146,7 @@ ss.dll.ulscheduler.config.txScheduler.queue = wimac.Scheduler.BypassQueue()
 
 ss.phy.ofdmaStation.rxFrequency = config.frequency
 ss.phy.ofdmaStation.txFrequency = config.frequency
-if config.configWiMAX.trafficDLenabled:
+if config.configWiMAX.trafficDLenabled and config.configWiMAX.trafficDL > 0.0:
     poissonDL = constanze.traffic.Poisson(
         offset = 0.01, 
         throughput = config.configWiMAX.trafficDL, 
@@ -146,14 +154,16 @@ if config.configWiMAX.trafficDLenabled:
     ipBinding = IPBinding(rangWiMAX.nl.domainName, ss.nl.domainName)
     rangWiMAX.load.addTraffic(ipBinding, poissonDL)
 
-if config.configWiMAX.trafficULenabled:
+if config.configWiMAX.trafficULenabled and config.configWiMAX.trafficUL > 0.0:
     poissonUL = constanze.traffic.Poisson(
         offset = 0.0, 
         throughput = 
         config.configWiMAX.trafficUL, 
         packetSize = config.configWiMAX.packetSize)
 else:
-    poissonUL = constanze.traffic.CBR0(duration = 1E-6)       
+    poissonUL = constanze.traffic.CBR0(duration = 1E-6,
+                        throughput = 1.0, 
+                        packetSize = config.configWiMAX.packetSize)       
       
 ipBinding = IPBinding(ss.nl.domainName, rangWiMAX.nl.domainName)
 ss.load.addTraffic(ipBinding, poissonUL)
@@ -161,6 +171,10 @@ ipListenerBinding = IPListenerBinding(ss.nl.domainName)
 listener = Listener(ss.nl.domainName + ".listener")
 ss.load.addListener(ipListenerBinding, listener)
 ss.dll.associate(bs.dll)
+
+if config.noIPHeader:
+    ss.nl.ipHeader.config.headerSize = 0
+
 associations[bs].append(ss)
 userTerminals.append(ss)
 WNS.simulationModel.nodes.append(ss)
@@ -179,8 +193,14 @@ if not config.configWiMAX.adaptiveMCS:
     symbolDuration = Conf.parametersPhy.symbolDuration
     subCarriersPerSubChannel = Conf.parametersPhy.dataSubCarrier
     
-    bs.dll.dlscheduler.config.txScheduler.registry.phyModeMapper = AllBPSKMapper(symbolDuration, subCarriersPerSubChannel)
-    bs.dll.ulscheduler.config.rxScheduler.registry.phyModeMapper = AllBPSKMapper(symbolDuration, subCarriersPerSubChannel)
+    bs.dll.dlscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+    bs.dll.ulscheduler.config.rxScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+    ss.dll.ulscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+        
+    
 
 bsIDs = []
 bsIDs.append(bs.dll.stationID)
