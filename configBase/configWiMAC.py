@@ -116,13 +116,6 @@ accessPoints = []
 
 bs = wimac.support.Nodes.BaseStation(stationIDs.next(), Conf)
 
-# Use the Bypass Queue
-# DL Master
-bs.dll.dlscheduler.config.txScheduler.queue = wimac.Scheduler.BypassQueue()
-
-if config.noIPHeader:
-    bs.dll.ulscheduler.config.rxScheduler.pseudoGenerator.pduOverhead -= 160
-
 bs.phy.ofdmaStation.rxFrequency = config.frequency
 bs.phy.ofdmaStation.txFrequency = config.frequency
 bs.dll.logger.level = 2
@@ -139,10 +132,6 @@ rangWiMAX.load.addListener(ipListenerBinding, listener)
 userTerminals = []
 
 ss = wimac.support.Nodes.SubscriberStation(stationIDs.next(), Conf)
-
-# Use the Bypass Queue
-# UL Slave
-ss.dll.ulscheduler.config.txScheduler.queue = wimac.Scheduler.BypassQueue()
 
 ss.phy.ofdmaStation.rxFrequency = config.frequency
 ss.phy.ofdmaStation.txFrequency = config.frequency

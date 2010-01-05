@@ -68,9 +68,9 @@ class Config(object):
         # Even if False we transmit one packet to establish flow
         trafficULenabled = True     
         trafficDLenabled = True
-        trafficUL = 3E6
-        trafficDL = 3E6
-        packetSize = 240.0 # Max 240 if noIPHeader = True, else 80
+        trafficUL = 2E6
+        trafficDL = 2E6
+        packetSize = 239.0 # Max 240 if noIPHeader = True, else 80
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
         adaptiveMCS = False
@@ -81,7 +81,7 @@ class Config(object):
         trafficULenabled = True
         trafficDLenabled = False
         trafficUL = 2E6
-        trafficDL = 2E6
+        trafficDL = 0
         packetSize = 12000.0
         
         # If False only 5Mbps is used no mather what channel estimation decides
@@ -91,7 +91,7 @@ class Config(object):
     frequency = 5470.0 #GHz
     noIPHeader = True #Set to true to set IP header to 0
     
-    simTime = 0.5
+    simTime = 1.0
     # When should probing start?
     settlingTime = 0.05
     configWiMAX = ConfigWiMAX()
