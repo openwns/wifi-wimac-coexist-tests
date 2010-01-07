@@ -212,8 +212,8 @@ for node in [ss, bs]:
     node.dll.topTpProbe.config.aggregatedBitThroughputProbeName = prefix + rest
     rest = node.dll.topPProbe.config.incomingDelayProbeName.split(ss.dll.topPProbe.config.prefix)[1]
     node.dll.topPProbe.config.incomingDelayProbeName = prefix + rest
-    node.dll.topTpProbe.config.windowSize = config.configWiMAX.probeWindowSize
-    node.dll.topTpProbe.config.sampleInterval = config.configWiMAX.probeWindowSize
+    node.dll.topTpProbe.config.windowSize = config.probeWindowSize
+    node.dll.topTpProbe.config.sampleInterval = config.probeWindowSize
     node.dll.crc.config.lossRatioProbeName = "layer2.CRCloss"
     node.dll.crc.config.isDropping = True
     node.dll.phyUser.config.cirProbeName = "layer2.dataSINR"

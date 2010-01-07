@@ -68,13 +68,12 @@ class Config(object):
         # Even if False we transmit one packet to establish flow
         trafficULenabled = True     
         trafficDLenabled = True
-        trafficUL = 2E6
-        trafficDL = 2E6
+        trafficUL = 1E6
+        trafficDL = 1E6
         packetSize = 239.0 # Max 240 if noIPHeader = True, else 80
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
         adaptiveMCS = False
-        probeWindowSize = 0.01 # Probe per frame
     
     class ConfigWiFi(object):
         distance_AP_STA = 50.0                
@@ -82,7 +81,7 @@ class Config(object):
         trafficDLenabled = False
         trafficUL = 2E6
         trafficDL = 0
-        packetSize = 12000.0
+        packetSize = 3000.0
         
         # If False only 5Mbps is used no mather what channel estimation decides
         adaptiveMCS = False          
@@ -90,8 +89,9 @@ class Config(object):
     distanceAP_BS = 1.0
     frequency = 5470.0 #GHz
     noIPHeader = True #Set to true to set IP header to 0
+    probeWindowSize = 0.05 # Probe per 5 WiMAX frames
     
-    simTime = 1.0
+    simTime = 0.8
     # When should probing start?
     settlingTime = 0.05
     configWiMAX = ConfigWiMAX()

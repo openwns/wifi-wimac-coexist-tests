@@ -198,6 +198,8 @@ for node in [sta, ap]:
     assert isinstance(fu, openwns.Probe.Window), "Dirty hack failed: FU Nr. 0 in WiFi FUN is not the Window Probe"
     rest = fu.incomingBitThroughputProbeName.split(fu.prefix)[1]
     fu.incomingBitThroughputProbeName = prefix + rest
+    fu.windowSize = config.probeWindowSize
+    fu.sampleInterval = config.probeWindowSize
     fu = node.dll.fun.functionalUnit[1]    
     assert isinstance(fu, openwns.Probe.Packet), "Dirty hack failed: FU Nr. 1 in WiFi FUN is not the Packet Probe"
     rest = fu.incomingDelayProbeName.split(fu.prefix)[1]
