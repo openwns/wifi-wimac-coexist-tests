@@ -70,7 +70,7 @@ class Config(object):
         trafficDLenabled = True
         trafficUL = 1E6
         trafficDL = 1E6
-        packetSize = 239.0 # Max 240 if noIPHeader = True, else 80
+        packetSize = 3000.0
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
         adaptiveMCS = False
