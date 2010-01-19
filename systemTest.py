@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.4
+#! /usr/bin/env python
 
 # this is needed, so that the script can be called from everywhere
 import os
@@ -40,5 +40,4 @@ if __name__ == '__main__':
     testRunner = pywns.WNSUnit.TextTestRunner()
 
     # Finally, run the tests.
-    for it in testSuite:
-       testRunner.run(it)
+    testRunner.run(testSuite)
