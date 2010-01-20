@@ -24,10 +24,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-import os
-import sys
-sys.path.append(os.path.join('.','commonConfig'))
-sys.path.append(os.path.join('..','commonConfig'))
 
 import rise
 import openwns.node
@@ -54,7 +50,7 @@ import wimac.evaluation.default
 import wimac.LLMapping
 
 
-from support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
+from wimac.support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
 
 associations = {}
 
@@ -67,6 +63,8 @@ class Conf(Frozen):
     parametersSystem      = ParametersSystem
     parametersPhy         = ParametersOFDM
     parametersMAC         = ParametersMAC
+    
+    parametersPhy.slotDuration = 3.0 *  parametersPhy.symbolDuration
     
     parametersPropagation = ParametersPropagation
     
