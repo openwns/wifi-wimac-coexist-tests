@@ -24,10 +24,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-import os
-import sys
-sys.path.append(os.path.join('.','commonConfig'))
-sys.path.append(os.path.join('..','commonConfig'))
 
 import rise
 import openwns.node
@@ -48,17 +44,13 @@ from constanze.node import IPBinding, IPListenerBinding, Listener
 from openwns.pyconfig import Frozen
 from openwns.pyconfig import Sealed
 
-import Nodes
-import Layer2
+import wimac.support.Nodes
 import wimac.KeyBuilder as CIDKeyBuilder
 import wimac.evaluation.default
 import wimac.LLMapping
 
 
-from support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
-from support.scenarioSupport import setupRelayScenario
-from support.scenarioSupport import calculateScenarioRadius, numberOfAccessPointsForHexagonalScenario
-import support.PostProcessor as PostProcessor
+from wimac.support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
 
 associations = {}
 
@@ -71,6 +63,9 @@ class Conf(Frozen):
     parametersSystem      = ParametersSystem
     parametersPhy         = ParametersOFDM
     parametersMAC         = ParametersMAC
+    
+    parametersPhy.slotDuration = 3.0 *  parametersPhy.symbolDuration
+    
     parametersPropagation = ParametersPropagation
     
     # WiMAC Layer2 forming
@@ -79,6 +74,7 @@ class Conf(Frozen):
     friendliness_dBm = "-85 dBm"
     maxBursts = 20
     positionErrorVariance = 0.0
+    numberOfTimeSlots = 100
     
     #only considered for mapsizes not synchronized with actual scheduling strategy
     dlStrategy = "ProportionalFairDL"
@@ -98,7 +94,11 @@ WNS.modules.wimac.parametersPHY = Conf.parametersPhy
 ### Instantiating Nodes and setting Traffic        #
 ####################################################
 # one RANG
-rangWiMAX = Nodes.RANG()
+rangWiMAX = wimac.support.Nodes.RANG()
+                                        
+if config.noIPHeader:
+    rangWiMAX.nl.ipHeader.config.headerSize = 0
+
 
 # BSs with some SSs each
 
@@ -112,7 +112,8 @@ stationIDs = stationID()
 
 accessPoints = []
 
-bs = Nodes.BaseStation(stationIDs.next(), Conf)
+bs = wimac.support.Nodes.BaseStation(stationIDs.next(), Conf)
+
 bs.phy.ofdmaStation.rxFrequency = config.frequency
 bs.phy.ofdmaStation.txFrequency = config.frequency
 bs.dll.logger.level = 2
@@ -128,10 +129,11 @@ rangWiMAX.load.addListener(ipListenerBinding, listener)
 
 userTerminals = []
 
-ss = Nodes.SubscriberStation(stationIDs.next(), Conf)
+ss = wimac.support.Nodes.SubscriberStation(stationIDs.next(), Conf)
+
 ss.phy.ofdmaStation.rxFrequency = config.frequency
 ss.phy.ofdmaStation.txFrequency = config.frequency
-if config.configWiMAX.trafficDLenabled:
+if config.configWiMAX.trafficDLenabled and config.configWiMAX.trafficDL > 0.0:
     poissonDL = constanze.traffic.Poisson(
         offset = 0.01, 
         throughput = config.configWiMAX.trafficDL, 
@@ -139,14 +141,16 @@ if config.configWiMAX.trafficDLenabled:
     ipBinding = IPBinding(rangWiMAX.nl.domainName, ss.nl.domainName)
     rangWiMAX.load.addTraffic(ipBinding, poissonDL)
 
-if config.configWiMAX.trafficULenabled:
+if config.configWiMAX.trafficULenabled and config.configWiMAX.trafficUL > 0.0:
     poissonUL = constanze.traffic.Poisson(
         offset = 0.0, 
         throughput = 
         config.configWiMAX.trafficUL, 
         packetSize = config.configWiMAX.packetSize)
 else:
-    poissonUL = constanze.traffic.CBR0(duration = 1E-6)       
+    poissonUL = constanze.traffic.CBR0(duration = 1E-6,
+                        throughput = 1.0, 
+                        packetSize = config.configWiMAX.packetSize)       
       
 ipBinding = IPBinding(ss.nl.domainName, rangWiMAX.nl.domainName)
 ss.load.addTraffic(ipBinding, poissonUL)
@@ -154,6 +158,10 @@ ipListenerBinding = IPListenerBinding(ss.nl.domainName)
 listener = Listener(ss.nl.domainName + ".listener")
 ss.load.addListener(ipListenerBinding, listener)
 ss.dll.associate(bs.dll)
+
+if config.noIPHeader:
+    ss.nl.ipHeader.config.headerSize = 0
+
 associations[bs].append(ss)
 userTerminals.append(ss)
 WNS.simulationModel.nodes.append(ss)
@@ -172,8 +180,14 @@ if not config.configWiMAX.adaptiveMCS:
     symbolDuration = Conf.parametersPhy.symbolDuration
     subCarriersPerSubChannel = Conf.parametersPhy.dataSubCarrier
     
-    bs.dll.dlscheduler.config.txScheduler.registry.phyModeMapper = AllBPSKMapper(symbolDuration, subCarriersPerSubChannel)
-    bs.dll.ulscheduler.config.rxScheduler.registry.phyModeMapper = AllBPSKMapper(symbolDuration, subCarriersPerSubChannel)
+    bs.dll.dlscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+    bs.dll.ulscheduler.config.rxScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+    ss.dll.ulscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+        symbolDuration, subCarriersPerSubChannel))
+        
+    
 
 bsIDs = []
 bsIDs.append(bs.dll.stationID)
@@ -192,12 +206,15 @@ prefix = "layer2"
 for node in [ss, bs]:
     rest = node.dll.topTpProbe.config.incomingBitThroughputProbeName.split(ss.dll.topPProbe.config.prefix)[1]
     node.dll.topTpProbe.config.incomingBitThroughputProbeName = prefix + rest
+    rest = node.dll.topTpProbe.config.aggregatedBitThroughputProbeName.split(ss.dll.topPProbe.config.prefix)[1]
+    node.dll.topTpProbe.config.aggregatedBitThroughputProbeName = prefix + rest
     rest = node.dll.topPProbe.config.incomingDelayProbeName.split(ss.dll.topPProbe.config.prefix)[1]
     node.dll.topPProbe.config.incomingDelayProbeName = prefix + rest
+    node.dll.topTpProbe.config.windowSize = config.probeWindowSize
+    node.dll.topTpProbe.config.sampleInterval = config.probeWindowSize
     node.dll.crc.config.lossRatioProbeName = "layer2.CRCloss"
     node.dll.crc.config.isDropping = True
     node.dll.phyUser.config.cirProbeName = "layer2.dataSINR"
-    
 
 # one Virtual ARP Zone
 varpWiMAX = VirtualARPServer("vARP", "WIMAXRAN")

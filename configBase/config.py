@@ -24,8 +24,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-import os
-import sys
 
 import rise
 import openwns
@@ -67,9 +65,9 @@ class Config(object):
         
         # Even if False we transmit one packet to establish flow
         trafficULenabled = True     
-        trafficDLenabled = False
-        trafficUL = 3E6
-        trafficDL = 3E6
+        trafficDLenabled = True
+        trafficUL = 1E6
+        trafficDL = 1E6
         packetSize = 3000.0
         
         # If False only BPSK 1/2 is used no mather what channel estimation decides
@@ -79,17 +77,19 @@ class Config(object):
         distance_AP_STA = 50.0                
         trafficULenabled = True
         trafficDLenabled = False
-        trafficUL = 5E6
-        trafficDL = 5E6
-        packetSize = 12000.0
+        trafficUL = 2E6
+        trafficDL = 0
+        packetSize = 3000.0
         
         # If False only 5Mbps is used no mather what channel estimation decides
         adaptiveMCS = False          
     
     distanceAP_BS = 1.0
     frequency = 5470.0 #GHz
+    noIPHeader = True #Set to true to set IP header to 0
+    probeWindowSize = 0.05 # Probe per 5 WiMAX frames
     
-    simTime = 0.5
+    simTime = 0.8
     # When should probing start?
     settlingTime = 0.05
     configWiMAX = ConfigWiMAX()
@@ -217,11 +217,7 @@ riseConfig.debug.transmitter = False
 riseConfig.debug.main = False
 riseConfig.debug.antennas = False
 
-scenario = rise.Scenario.Scenario(xmin = 0, 
-                                    ymin = 0,
-                                    xmax = config.distanceAP_BS, 
-                                    ymax = max(config.configWiMAX.distance_BS_SS,
-                                                config.configWiFi.distance_AP_STA))
+scenario = rise.Scenario.Scenario()
 
 ofdmaPhyConfig = WNS.modules.ofdmaPhy
 ofdmaPhySystem = ofdmaphy.OFDMAPhy.OFDMASystem('ofdma')
@@ -262,6 +258,7 @@ class ProbeData(object):
 
 probes = []
 probes.append(ProbeData("layer2.window.incoming.bitThroughput", 0.0, 100E6, 10000, "PDF"))
+probes.append(ProbeData("layer2.window.aggregated.bitThroughput", 0.0, 100E6, 10000, "PDF"))
 probes.append(ProbeData("layer2.packet.incoming.delay", 0.0, 1.0, 10000, "PDF"))
 probes.append(ProbeData("layer2.CRCloss", 0.0, 1.0, 1, "PDF"))
 probes.append(ProbeData("layer2.dataSINR", -200, 200, 4000, "PDF", True))

@@ -78,6 +78,10 @@ managerPool = wifimac.support.ChannelManagerPool(scenario = scenario,
 
 ######################################
 # Radio channel propagation parameters
+xmax = config.distanceAP_BS
+ymax = max(config.configWiMAX.distance_BS_SS,
+    config.configWiFi.distance_AP_STA)
+
 myPathloss = rise.scenario.Pathloss.PyFunction(
     validFrequencies = Interval(2000, 6000),
     validDistances = Interval(2, 5000), #[m]
@@ -89,8 +93,8 @@ myPathloss = rise.scenario.Pathloss.PyFunction(
     outOfMinRange = rise.scenario.Pathloss.Constant("42 dB"),
     outOfMaxRange = rise.scenario.Pathloss.Deny(),
     scenarioWrap = False,
-    sizeX = scenario.getXMax(),
-    sizeY = scenario.getYMax)
+    sizeX = xmax,
+    sizeY = ymax)
 myShadowing = rise.scenario.Shadowing.No()
 myFastFading = rise.scenario.FastFading.No()
 propagationConfig = rise.scenario.Propagation.Configuration(
@@ -106,6 +110,10 @@ nc = wifimac.support.NodeCreator(propagationConfig)
 
 # one RANG
 rang = nc.createRANG(listener = config.configWiFi.trafficULenabled, loggerLevel = commonLoggerLevel)
+
+if config.noIPHeader:
+  rang.nl.ipHeader.config.headerSize = 0
+
 WNS.simulationModel.nodes.append(rang)
 
 # create (magic) service nodes for ARP, DNS, Pathselection, Capability Information
@@ -152,6 +160,11 @@ sta = nc.createSTA(idGen, managerPool, rang,
                     config = staConfig,
                     loggerLevel = commonLoggerLevel,
                     dllLoggerLevel = dllLoggerLevel)
+                                        
+if config.noIPHeader:
+    sta.nl.ipHeader.config.headerSize = 0
+
+                    
 print "Created STA at (" + str(staPos) + ")"
 
 if(config.configWiFi.trafficDLenabled):
@@ -185,6 +198,8 @@ for node in [sta, ap]:
     assert isinstance(fu, openwns.Probe.Window), "Dirty hack failed: FU Nr. 0 in WiFi FUN is not the Window Probe"
     rest = fu.incomingBitThroughputProbeName.split(fu.prefix)[1]
     fu.incomingBitThroughputProbeName = prefix + rest
+    fu.windowSize = config.probeWindowSize
+    fu.sampleInterval = config.probeWindowSize
     fu = node.dll.fun.functionalUnit[1]    
     assert isinstance(fu, openwns.Probe.Packet), "Dirty hack failed: FU Nr. 1 in WiFi FUN is not the Packet Probe"
     rest = fu.incomingDelayProbeName.split(fu.prefix)[1]
