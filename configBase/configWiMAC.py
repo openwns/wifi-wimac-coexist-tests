@@ -48,6 +48,7 @@ import wimac.support.Nodes
 import wimac.KeyBuilder as CIDKeyBuilder
 import wimac.evaluation.default
 import wimac.LLMapping
+import wimac.Services
 
 
 from wimac.support.WiMACParameters import ParametersSystem, ParametersOFDM, ParametersMAC, ParametersPropagation, ParametersPropagation_NLOS
@@ -67,6 +68,9 @@ class Conf(Frozen):
     parametersPhy.slotDuration = 3.0 *  parametersPhy.symbolDuration
     
     parametersPropagation = ParametersPropagation
+    
+    # We manually configure the association relations
+    parametersMAC.associationService = wimac.Services.Fixed()
     
     # WiMAC Layer2 forming
     beamforming = False
