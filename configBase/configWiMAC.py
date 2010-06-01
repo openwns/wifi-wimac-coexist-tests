@@ -173,22 +173,22 @@ rangWiMAX.dll.addAP(bs)
 
 WNS.simulationModel.nodes.append(rangWiMAX)
 
-class AllBPSKMapper(PhyModeMapper):
+class AllQPSKMapper(PhyModeMapper):
     def __init__(self, symbolDuration, subCarriersPerSubChannel):
-        super(AllBPSKMapper, self).__init__(symbolDuration, subCarriersPerSubChannel)
+        super(AllQPSKMapper, self).__init__(symbolDuration, subCarriersPerSubChannel)
 
         self.setMinimumSINR(-1000.0);
-        self.addPhyMode(Interval(-1000.0,   1000.0, "(]"), wimac.LLMapping.WIMAXPhyMode1)
+        self.addPhyMode(Interval(-1000.0,   1000.0, "(]"), bs.dll.mapper.lowestPhyMode)
 
 if not config.configWiMAX.adaptiveMCS:
     symbolDuration = Conf.parametersPhy.symbolDuration
     subCarriersPerSubChannel = Conf.parametersPhy.dataSubCarrier
     
-    bs.dll.dlscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+    bs.dll.dlscheduler.config.txScheduler.registry.setPhyModeMapper(AllQPSKMapper(
         symbolDuration, subCarriersPerSubChannel))
-    bs.dll.ulscheduler.config.rxScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+    bs.dll.ulscheduler.config.rxScheduler.registry.setPhyModeMapper(AllQPSKMapper(
         symbolDuration, subCarriersPerSubChannel))
-    ss.dll.ulscheduler.config.txScheduler.registry.setPhyModeMapper(AllBPSKMapper(
+    ss.dll.ulscheduler.config.txScheduler.registry.setPhyModeMapper(AllQPSKMapper(
         symbolDuration, subCarriersPerSubChannel))
         
     
