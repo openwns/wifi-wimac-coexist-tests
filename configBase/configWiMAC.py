@@ -217,7 +217,6 @@ for node in [ss, bs]:
     node.dll.topTpProbe.config.windowSize = config.probeWindowSize
     node.dll.topTpProbe.config.sampleInterval = config.probeWindowSize
     node.dll.crc.config.lossRatioProbeName = "layer2.CRCloss"
-    node.dll.crc.config.isDropping = True
     node.dll.phyUser.config.cirProbeName = "layer2.dataSINR"
 
 # one Virtual ARP Zone
