@@ -70,7 +70,7 @@ class Conf(Frozen):
     parametersPropagation = ParametersPropagation
     
     # We manually configure the association relations
-    parametersMAC.associationService = wimac.Services.Fixed()
+    parametersMAC.associationService = "Fixed"
     
     # WiMAC Layer2 forming
     beamforming = False
