@@ -98,7 +98,7 @@ WNS.modules.wimac.parametersPHY = Conf.parametersPhy
 ### Instantiating Nodes and setting Traffic        #
 ####################################################
 # one RANG
-rangWiMAX = wimac.support.Nodes.RANG()
+rangWiMAX = wimac.support.Nodes.RANG(Conf)
                                         
 if config.noIPHeader:
     rangWiMAX.nl.ipHeader.config.headerSize = 0
