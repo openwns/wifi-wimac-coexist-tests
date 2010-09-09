@@ -43,7 +43,7 @@ import wifimac.support
 import wifimac.evaluation.default
 import wifimac.evaluation.ip
 import wifimac.support.Transceiver
-from wifimac.lowerMAC.RateAdaptation import Opportunistic
+from wifimac.lowerMAC.RateAdaptation import ARF
 import wifimac.convergence.FrameSynchronization
 
 commonLoggerLevel = 2
@@ -58,7 +58,7 @@ class MyBSSTransceiver(wifimac.support.Transceiver.Mesh):
         self.layer2.beacon.delay = beaconDelay
         self.layer2.rtsctsThreshold = 1e6 * 8
         if config.configWiFi.adaptiveMCS:
-            self.layer2.ra.raStrategy = Opportunistic()
+            self.layer2.ra.raStrategy = ARF()
 
 # configuration class for STAs
 class MySTAConfig(wifimac.support.Transceiver.Station):
@@ -69,7 +69,7 @@ class MySTAConfig(wifimac.support.Transceiver.Station):
                                           scanDuration = scanDurationPerFrequency)
         self.layer2.rtsctsThreshold = 1e6 * 8
         if config.configWiFi.adaptiveMCS:
-            self.layer2.ra.raStrategy = Opportunistic()
+            self.layer2.ra.raStrategy = ARF()
 
 ofdmaPhyConfig = WNS.modules.ofdmaPhy
 managerPool = wifimac.support.ChannelManagerPool(scenario = scenario,
