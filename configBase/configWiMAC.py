@@ -71,6 +71,7 @@ class Conf(Frozen):
     
     # We manually configure the association relations
     parametersMAC.associationService = "Fixed"
+    centerFrequency = 5470#MHz
     
     # WiMAC Layer2 forming
     beamforming = False

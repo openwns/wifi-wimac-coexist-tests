@@ -68,6 +68,7 @@ class ConfWiMAC(Frozen):
     
     parametersPhy.slotDuration = 3.0 *  parametersPhy.symbolDuration
 
+        centerFrequency = 5470#MHz
 	# WiMAC Layer2 forming
 	beamforming = False
 	maxBeams = 1
